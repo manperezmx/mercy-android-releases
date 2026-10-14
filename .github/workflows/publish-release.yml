@@ -42,6 +42,8 @@ jobs:
 
           REPOSITORY = "manperezmx/mercy-android-releases"
           TAG = "v0.18.0"
+          # Preserve the target of the already-created draft; a workflow fix has a new job SHA.
+          RELEASE_TARGET_SHA = "362865454b7c61f9150df717434863a1a93c9e5f"
           SOURCE_ORIGIN = "https://estancia-pedidos-demo-2026.cruzperezjuanmanuel2.chatgpt.site"
           API_ORIGIN = "https://api.github.com"
           CERTIFICATE = "5b7833a44ac3770bae1b6eb18f134a87219be3d9337ba71f7b266adb607828da"
@@ -321,14 +323,14 @@ jobs:
           AUTH_OPENER = urllib.request.build_opener(NoRedirect)
           PUBLIC_OPENER = urllib.request.build_opener(PublicHTTPSRedirect)
           TOKEN = os.environ.get("GITHUB_TOKEN", "")
-          SHA = os.environ.get("GITHUB_SHA", "")
+          JOB_SHA = os.environ.get("GITHUB_SHA", "")
           require(os.environ.get("GITHUB_REPOSITORY") == REPOSITORY,
                   "Workflow must run in the authorized release repository")
           require(os.environ.get("GITHUB_REF") == "refs/heads/main",
                   "Workflow must run only from main")
           require(os.environ.get("GITHUB_EVENT_NAME") in ("push", "workflow_dispatch"),
                   "Unexpected workflow trigger")
-          require(re.fullmatch(r"[a-f0-9]{40}", SHA) is not None and TOKEN,
+          require(re.fullmatch(r"[a-f0-9]{40}", JOB_SHA) is not None and TOKEN,
                   "GitHub runtime commit or token is missing")
 
 
@@ -469,11 +471,21 @@ jobs:
               return {item["name"]: item for item in assets}
 
 
-          def verify_asset(item, expected):
+          def verify_asset(item, expected, *, draft=False):
+              name = item.get("name")
+              require(isinstance(name, str) and name in EXPECTED and EXPECTED[name] == expected,
+                      "Release asset filename differs from exact pinned inputs; no replacement performed")
+              url = item.get("browser_download_url")
+              valid_url = isinstance(url, str) and url == PUBLIC_BASE + name
+              if draft and isinstance(url, str):
+                  # GitHub assigns untagged URLs until publishing a draft. Validate the complete
+                  # literal URL, not only urlsplit fields (which may strip control characters).
+                  draft_pattern = (r"https://github\.com/" + re.escape(REPOSITORY) +
+                                   r"/releases/download/untagged-[A-Za-z0-9-]{1,80}/" + re.escape(name))
+                  valid_url = valid_url or re.fullmatch(draft_pattern, url) is not None
               require(item.get("state") == "uploaded" and item.get("size") == expected["bytes"] and
                       item.get("digest") == "sha256:" + expected["sha256"] and
-                      item.get("content_type") == expected["mime"] and
-                      item.get("browser_download_url") == PUBLIC_BASE + item.get("name", ""),
+                      item.get("content_type") == expected["mime"] and valid_url,
                       "Uploaded release asset metadata differs from exact pinned inputs; no replacement performed")
 
 
@@ -491,15 +503,16 @@ jobs:
           def verify_main_target():
               branch = api("GET", PREFIX + "/git/ref/heads/main")
               require(branch.get("object", {}).get("type") == "commit" and
-                      branch["object"].get("sha") == SHA,
+                      branch["object"].get("sha") == JOB_SHA,
                       "Main changed during this run; no release mutation is permitted")
 
 
           def verified_published_release(release, tools, directory):
               require(release.get("tag_name") == TAG and release.get("draft") is False and
-                      release.get("prerelease") is False and release.get("immutable") is True,
+                      release.get("prerelease") is False and release.get("immutable") is True and
+                      release.get("target_commitish") == RELEASE_TARGET_SHA,
                       "Release is not published and immutable as required")
-              verify_tag(release.get("target_commitish"), must_exist=True)
+              verify_tag(RELEASE_TARGET_SHA, must_exist=True)
               assets = list_assets(release["id"])
               require(set(assets) == set(EXPECTED), "Published release lacks exact expected assets")
               for name, item in assets.items():
@@ -519,8 +532,9 @@ jobs:
               repository = api("GET", PREFIX)
               require(repository.get("full_name") == REPOSITORY and repository.get("private") is False and
                       repository.get("default_branch") == "main", "Unexpected release repository")
-              commit = api("GET", PREFIX + "/commits/" + SHA)
-              require(commit.get("sha") == SHA, "Workflow SHA is not a commit in the release repository")
+              for target in dict.fromkeys((JOB_SHA, RELEASE_TARGET_SHA)):
+                  commit = api("GET", PREFIX + "/commits/" + target)
+                  require(commit.get("sha") == target, "Workflow or release SHA is not a commit in the release repository")
               tools = sdk_tools()
               with tempfile.TemporaryDirectory(prefix="mercy-publication-") as temporary:
                   directory = Path(temporary)
@@ -541,12 +555,12 @@ jobs:
                       print("Exact release already exists; no mutation performed.")
                       return
                   if draft:
-                      require(draft.get("target_commitish") == SHA and draft.get("prerelease") is False and
+                      require(draft.get("target_commitish") == RELEASE_TARGET_SHA and draft.get("prerelease") is False and
                               draft.get("name") == "Mercy Android 0.18.0" and draft.get("body") == NOTES,
                               "Existing draft has a different target or release notes; no alteration performed")
                       for name, item in list_assets(draft["id"]).items():
-                          verify_asset(item, EXPECTED[name])
-                  verify_tag(SHA)
+                          verify_asset(item, EXPECTED[name], draft=True)
+                  verify_tag(RELEASE_TARGET_SHA)
                   verify_main_target()
                   # Obtain only the already-public installer files; verify all ten chunks first.
                   current = MANIFEST["releases"][0]
@@ -569,9 +583,9 @@ jobs:
                   (directory / "release-manifest.json").write_bytes(manifest_bytes)
                   if draft is None:
                       verify_main_target()
-                      verify_tag(SHA)
+                      verify_tag(RELEASE_TARGET_SHA)
                       draft = api("POST", PREFIX + "/releases", {
-                          "tag_name": TAG, "target_commitish": SHA, "name": "Mercy Android 0.18.0",
+                          "tag_name": TAG, "target_commitish": RELEASE_TARGET_SHA, "name": "Mercy Android 0.18.0",
                           "body": NOTES, "draft": True, "prerelease": False, "generate_release_notes": False})
                   require(draft.get("draft") is True and draft.get("tag_name") == TAG,
                           "GitHub did not create the expected draft")
@@ -581,7 +595,7 @@ jobs:
                   assets = list_assets(draft["id"])
                   for name, expected in EXPECTED.items():
                       if name in assets:
-                          verify_asset(assets[name], expected)
+                          verify_asset(assets[name], expected, draft=True)
                           continue
                       body = (directory / name).read_bytes()
                       require(len(body) == expected["bytes"] and hashlib.sha256(body).hexdigest() == expected["sha256"],
@@ -589,15 +603,15 @@ jobs:
                       item = api("POST", upload_base + "?" + urllib.parse.urlencode({"name": name}),
                                  (body, expected["mime"]), upload=True)
                       require(item.get("name") == name, "Upload returned an unexpected filename")
-                      verify_asset(item, expected)
+                      verify_asset(item, expected, draft=True)
                       print("Verified uploaded asset:", name, expected["bytes"], expected["sha256"])
                   assets = list_assets(draft["id"])
                   require(set(assets) == set(EXPECTED), "Draft does not contain every exact approved asset")
                   for name, item in assets.items():
-                      verify_asset(item, EXPECTED[name])
+                      verify_asset(item, EXPECTED[name], draft=True)
                   # Only now publish. Root already enabled immutable releases by the authorized UI.
                   verify_main_target()
-                  verify_tag(SHA)
+                  verify_tag(RELEASE_TARGET_SHA)
                   result = api("PATCH", PREFIX + "/releases/" + str(draft["id"]),
                                {"draft": False, "make_latest": "true"})
                   verified_published_release(result, tools, directory)
