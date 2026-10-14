@@ -13,3 +13,9 @@ La versión 0.17.0 se conserva como respaldo. Android normalmente no permite ins
 El detector de calidad facial y OCR local no equivalen a reconocimiento de identidad o prueba de vida. Esas capacidades no se anuncian como verificadas.
 
 No contiene el código fuente de Mercy, claves de firma ni expedientes o datos de usuarios.
+
+## Descarga actual
+
+[Descargar Mercy Android 0.18.0](https://github.com/manperezmx/mercy-android-releases/releases/download/v0.18.0/Mercy-Android-0.18.0.apk) · 40.497.952 bytes · Android 6 o posterior (API 23).
+
+[Versiones y archivos de verificación](https://github.com/manperezmx/mercy-android-releases/releases/tag/v0.18.0). Los 15 APK fueron descargados íntegramente desde sus enlaces públicos y comprobados con las herramientas oficiales de Android. La release es inmutable. Las pruebas automatizadas no sustituyen la validación en teléfonos físicos.
