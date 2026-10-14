@@ -1,0 +1,623 @@
+# Install only this file as .github/workflows/publish-release.yml in the public
+# manperezmx/mercy-android-releases repository. It is not a source-app build.
+name: Publish exact Mercy Android 0.18.0 installers
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/publish-release.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mercy-android-v0.18.0-publication
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'manperezmx/mercy-android-releases' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Verify exact public APKs, attach to draft, then publish immutable release
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 - <<'PY_RELEASE'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+          import sys
+          import tempfile
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+          import zipfile
+
+          REPOSITORY = "manperezmx/mercy-android-releases"
+          TAG = "v0.18.0"
+          SOURCE_ORIGIN = "https://estancia-pedidos-demo-2026.cruzperezjuanmanuel2.chatgpt.site"
+          API_ORIGIN = "https://api.github.com"
+          CERTIFICATE = "5b7833a44ac3770bae1b6eb18f134a87219be3d9337ba71f7b266adb607828da"
+          MANIFEST = {
+            "schema_version": 1,
+            "latest_version": "0.18.0",
+            "package": "mx.mercy.preview",
+            "releases": [
+              {
+                "version": "0.18.0",
+                "version_code": 18,
+                "filename": "Mercy-Android-0.18.0.apk",
+                "package": "mx.mercy.preview",
+                "bytes": 40497952,
+                "sha256": "7b5af6120d0dad9dc9c102fbd5d403180d830e13911a05f51ee335f1f95c7f88",
+                "certificate_sha256": "5b7833a44ac3770bae1b6eb18f134a87219be3d9337ba71f7b266adb607828da",
+                "minimum_android_api": 23,
+                "target_android_api": 36,
+                "compile_android_api": 36
+              },
+              {
+                "version": "0.17.0",
+                "version_code": 17,
+                "filename": "Mercy-Android-0.17.0.apk",
+                "package": "mx.mercy.preview",
+                "bytes": 4090442,
+                "sha256": "ff5336f27fd848813f2bc2928595cb89088f631fd06b9997038f80ff9bf2740d",
+                "certificate_sha256": "5b7833a44ac3770bae1b6eb18f134a87219be3d9337ba71f7b266adb607828da",
+                "minimum_android_api": 23,
+                "target_android_api": 36,
+                "compile_android_api": 36
+              },
+              {
+                "version": "0.16.0",
+                "version_code": 16,
+                "filename": "Mercy-Android-0.16.0.apk",
+                "package": "mx.mercy.preview",
+                "bytes": 2865360,
+                "sha256": "7ebc771ca9051f8f7464d7f56c07a61d19230b3cb7b98e9f108924bd2d0284f4",
+                "certificate_sha256": "5b7833a44ac3770bae1b6eb18f134a87219be3d9337ba71f7b266adb607828da",
+                "minimum_android_api": 23,
+                "target_android_api": 36,
+                "compile_android_api": 36
+              },
+              {
+                "version": "0.15.0",
+                "version_code": 15,
+                "filename": "Mercy-Android-0.15.0.apk",
+                "package": "mx.mercy.preview",
+                "bytes": 2783440,
+                "sha256": "e4acfca0a849bedc60d92ab4bb0f0ddbae1499b8d94c93ea3cc94071cb5692a9",
+                "certificate_sha256": "5b7833a44ac3770bae1b6eb18f134a87219be3d9337ba71f7b266adb607828da",
+                "minimum_android_api": 23,
+                "target_android_api": 36,
+                "compile_android_api": 36
+              },
+              {
+                "version": "0.14.0",
+                "version_code": 14,
+                "filename": "Mercy-Android-0.14.0.apk",
+                "package": "mx.mercy.preview",
+                "bytes": 2779344,
+                "sha256": "494c59f81fb6d28181298ca064d072b40c9338459168bfc272a9368d99e27cd5",
+                "certificate_sha256": "5b7833a44ac3770bae1b6eb18f134a87219be3d9337ba71f7b266adb607828da",
+                "minimum_android_api": 23,
+                "target_android_api": 36,
+                "compile_android_api": 36
+              },
+              {
+                "version": "0.13.0",
+                "version_code": 13,
+                "filename": "Mercy-Android-0.13.0.apk",
+                "package": "mx.mercy.preview",
+                "bytes": 2767056,
+                "sha256": "29dd90629005d9f73645642e3b6884ef293e1cac7db951e2570429af27f99a76",
+                "certificate_sha256": "5b7833a44ac3770bae1b6eb18f134a87219be3d9337ba71f7b266adb607828da",
+                "minimum_android_api": 23,
+                "target_android_api": 36,
+                "compile_android_api": 36
+              },
+              {
+                "version": "0.11.0",
+                "version_code": 11,
+                "filename": "Mercy-Android-0.11.0.apk",
+                "package": "mx.mercy.preview",
+                "bytes": 2451606,
+                "sha256": "122d9ebb8dc8989a806e61412cb41558d99dc19e6847cf42ee55c19b3e728465",
+                "certificate_sha256": "5b7833a44ac3770bae1b6eb18f134a87219be3d9337ba71f7b266adb607828da",
+                "minimum_android_api": 23,
+                "target_android_api": 36,
+                "compile_android_api": 36
+              },
+              {
+                "version": "0.10.0",
+                "version_code": 10,
+                "filename": "Mercy-Android-0.10.0.apk",
+                "package": "mx.mercy.preview",
+                "bytes": 2133355,
+                "sha256": "a8565f9a78208511465012766fd12fc62ab9c3c7f0406b44df7db9ea3ccb5622",
+                "certificate_sha256": "5b7833a44ac3770bae1b6eb18f134a87219be3d9337ba71f7b266adb607828da",
+                "minimum_android_api": 23,
+                "target_android_api": 36,
+                "compile_android_api": 36
+              },
+              {
+                "version": "0.9.0",
+                "version_code": 9,
+                "filename": "Mercy-Android-0.9.0.apk",
+                "package": "mx.mercy.preview",
+                "bytes": 2133355,
+                "sha256": "ed96fb382181ce0d32c026ce66448e6038ebb6e1429b28f22091685a4af25340",
+                "certificate_sha256": "5b7833a44ac3770bae1b6eb18f134a87219be3d9337ba71f7b266adb607828da",
+                "minimum_android_api": 23,
+                "target_android_api": 36,
+                "compile_android_api": 36
+              },
+              {
+                "version": "0.8.0",
+                "version_code": 8,
+                "filename": "Mercy-Android-0.8.0.apk",
+                "package": "mx.mercy.preview",
+                "bytes": 2104515,
+                "sha256": "0ad79e51e6dff2cf179c537793501334cb88e50bba3a78b9d8e7b0b7d4a0aefe",
+                "certificate_sha256": "5b7833a44ac3770bae1b6eb18f134a87219be3d9337ba71f7b266adb607828da",
+                "minimum_android_api": 23,
+                "target_android_api": 36,
+                "compile_android_api": 36
+              },
+              {
+                "version": "0.7.0",
+                "version_code": 7,
+                "filename": "Mercy-Android-0.7.0.apk",
+                "package": "mx.mercy.preview",
+                "bytes": 2104515,
+                "sha256": "88e95a6803028c79e8087f29886566588d47108732660ac6e50c8e2889c24600",
+                "certificate_sha256": "5b7833a44ac3770bae1b6eb18f134a87219be3d9337ba71f7b266adb607828da",
+                "minimum_android_api": 23,
+                "target_android_api": 36,
+                "compile_android_api": 36
+              },
+              {
+                "version": "0.6.0",
+                "version_code": 6,
+                "filename": "Mercy-Android-0.6.0.apk",
+                "package": "mx.mercy.preview",
+                "bytes": 2104515,
+                "sha256": "11bb44cf528d5e05a102a34610fa2546276581e13cf7246a14a9949b5006ca3b",
+                "certificate_sha256": "5b7833a44ac3770bae1b6eb18f134a87219be3d9337ba71f7b266adb607828da",
+                "minimum_android_api": 23,
+                "target_android_api": 36,
+                "compile_android_api": 36
+              },
+              {
+                "version": "0.5.0",
+                "version_code": 5,
+                "filename": "Mercy-Android-0.5.0.apk",
+                "package": "mx.mercy.preview",
+                "bytes": 2100419,
+                "sha256": "4e3ee56cb74ba8a0e597daf96eb327dd6a9d3610053bf38aa2a375f8bca1a489",
+                "certificate_sha256": "5b7833a44ac3770bae1b6eb18f134a87219be3d9337ba71f7b266adb607828da",
+                "minimum_android_api": 23,
+                "target_android_api": 36,
+                "compile_android_api": 36
+              },
+              {
+                "version": "0.4.0",
+                "version_code": 4,
+                "filename": "Mercy-Android-0.4.0.apk",
+                "package": "mx.mercy.preview",
+                "bytes": 2096323,
+                "sha256": "cfe059a3fc446294d5958af736ddf602e908403bbff4cad2ea2091a9fa903caf",
+                "certificate_sha256": "5b7833a44ac3770bae1b6eb18f134a87219be3d9337ba71f7b266adb607828da",
+                "minimum_android_api": 23,
+                "target_android_api": 36,
+                "compile_android_api": 36
+              },
+              {
+                "version": "0.3.0",
+                "version_code": 3,
+                "filename": "Mercy-Android-0.3.0.apk",
+                "package": "mx.mercy.preview",
+                "bytes": 2088131,
+                "sha256": "6cdda180b4fc9088544550dbde390b078edd20dfb7b52871bffbd0e7c0361f06",
+                "certificate_sha256": "5b7833a44ac3770bae1b6eb18f134a87219be3d9337ba71f7b266adb607828da",
+                "minimum_android_api": 23,
+                "target_android_api": 36,
+                "compile_android_api": 36
+              }
+            ]
+          }
+          PARTS = [
+            {
+              "path": "/release-installers/android/0.18.0/part0001.bin",
+              "bytes": 4194304,
+              "sha256": "e2134e0aab4e4c72ffc38c9b2dff2a049ff783e88cbfd9c8b7266f7ee63c5cc0"
+            },
+            {
+              "path": "/release-installers/android/0.18.0/part0002.bin",
+              "bytes": 4194304,
+              "sha256": "9b5725b7ba2faada1db74c85d82fde27ffef5ee546ad94ee96f72df0bc7fadd6"
+            },
+            {
+              "path": "/release-installers/android/0.18.0/part0003.bin",
+              "bytes": 4194304,
+              "sha256": "48bc32b3ad0f2401ae0ac25328a390f23a78c5102c6961b81c6a36629b874e69"
+            },
+            {
+              "path": "/release-installers/android/0.18.0/part0004.bin",
+              "bytes": 4194304,
+              "sha256": "7297130b027d369cc8a5d3c56a489538d361968e4fe593fee8bc94ead46d5abb"
+            },
+            {
+              "path": "/release-installers/android/0.18.0/part0005.bin",
+              "bytes": 4194304,
+              "sha256": "68f21a38671f596e9b38903cc222c370e91474885765c8fed968542954d136bd"
+            },
+            {
+              "path": "/release-installers/android/0.18.0/part0006.bin",
+              "bytes": 4194304,
+              "sha256": "352eac3205e06312bdbd1834f117ff9c605b40f3d70af7b15be10e1994b79f5d"
+            },
+            {
+              "path": "/release-installers/android/0.18.0/part0007.bin",
+              "bytes": 4194304,
+              "sha256": "28e4fbb0202e67c55cf30acf7424692e6e875cf4bbfa7c792eec567b6f50ce75"
+            },
+            {
+              "path": "/release-installers/android/0.18.0/part0008.bin",
+              "bytes": 4194304,
+              "sha256": "6e47eca2f4472fbcb003e32b0c6a4a0e4c42f4b2638b4b20e15ab7a68e43ae4c"
+            },
+            {
+              "path": "/release-installers/android/0.18.0/part0009.bin",
+              "bytes": 4194304,
+              "sha256": "c415d69f4efbbe1e39f541e53dde33ebd8ca266144b6bf6bf3ea1ea836025871"
+            },
+            {
+              "path": "/release-installers/android/0.18.0/part0010.bin",
+              "bytes": 2749216,
+              "sha256": "9085f6af51e2ac75b422bae413725599b3b29e6e05153c79c4de09303d990cf3"
+            }
+          ]
+          NOTES = """Instaladores oficiales de Mercy Android.
+
+          - 0.18.0: 40,497,952 bytes; paquete mx.mercy.preview, código 18.
+          - Historial conservado: 0.17.0 a 0.3.0, excepto 0.12.0 que no existe en el archivo previo. Son 15 APK en total, incluido 0.18.0; todos conservan el paquete y certificado original.
+          - Los dos APK son los archivos ya firmados, sin reconstruirlos ni volverlos a firmar.
+          - 0.18.0 conserva arm64-v8a, armeabi-v7a, x86 y x86_64, así como los modelos locales de calidad facial y OCR. El cambio de 84 MB a 40.5 MB corresponde a compresión ZIP de bibliotecas nativas; se requiere espacio de extracción al instalar.
+          - El análisis de calidad facial/OCR no constituye comparación de identidad ni detección de ataques de presentación (PAD). Estas capacidades y las pruebas en teléfonos reales siguen pendientes.
+          - Las comprobaciones automáticas de integridad/firma no sustituyen pruebas reales de cámara, GPS en segundo plano, burbuja, notificaciones y conexión del repartidor.
+          - El APK 0.17.0 se conserva como referencia y respaldo. Android no permite instalar directamente un código 17 sobre un código 18; una reversión sin desinstalar requiere un nuevo APK con código superior y la firma original.
+
+          SHA256SUMS.txt y release-manifest.json contienen los tamaños, huellas y certificado para comprobar las descargas. El código original del servicio, la llave de firma, los accesos y los documentos privados no se publican en este repositorio.
+          """
+
+          # No user input, checkout, external actions, signing key or custom secret is used.
+          # GitHub's token is used only for api.github.com / the verified upload endpoint.
+          class Failure(Exception):
+              pass
+
+          def require(condition, message):
+              if not condition:
+                  raise Failure(message)
+
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, request, fp, code, message, headers, newurl):
+                  raise Failure("GitHub authenticated API unexpectedly requested a redirect")
+
+          class PublicHTTPSRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, request, fp, code, message, headers, newurl):
+                  parsed = urllib.parse.urlsplit(newurl)
+                  require(parsed.scheme == "https" and parsed.hostname and
+                          not parsed.username and not parsed.password,
+                          "Public file download attempted an unsafe redirect")
+                  return super().redirect_request(request, fp, code, message, headers, newurl)
+
+          AUTH_OPENER = urllib.request.build_opener(NoRedirect)
+          PUBLIC_OPENER = urllib.request.build_opener(PublicHTTPSRedirect)
+          TOKEN = os.environ.get("GITHUB_TOKEN", "")
+          SHA = os.environ.get("GITHUB_SHA", "")
+          require(os.environ.get("GITHUB_REPOSITORY") == REPOSITORY,
+                  "Workflow must run in the authorized release repository")
+          require(os.environ.get("GITHUB_REF") == "refs/heads/main",
+                  "Workflow must run only from main")
+          require(os.environ.get("GITHUB_EVENT_NAME") in ("push", "workflow_dispatch"),
+                  "Unexpected workflow trigger")
+          require(re.fullmatch(r"[a-f0-9]{40}", SHA) is not None and TOKEN,
+                  "GitHub runtime commit or token is missing")
+
+
+          def api(method, path, payload=None, missing_ok=False, upload=False):
+              if upload:
+                  parsed = urllib.parse.urlsplit(path)
+                  require(parsed.scheme == "https" and parsed.netloc == "uploads.github.com" and
+                          not parsed.username and not parsed.password and not parsed.fragment and
+                          re.fullmatch(r"/repos/manperezmx/mercy-android-releases/releases/[0-9]+/assets",
+                                       parsed.path), "Unexpected release upload endpoint")
+                  url = path
+                  body, content_type = payload
+              else:
+                  require(path.startswith("/repos/" + REPOSITORY + "/") or
+                          path == "/repos/" + REPOSITORY, "Unexpected GitHub API repository")
+                  url = API_ORIGIN + path
+                  body = None if payload is None else json.dumps(payload).encode("utf-8")
+                  content_type = "application/json"
+              headers = {"Accept": "application/vnd.github+json", "Content-Type": content_type,
+                         "Authorization": "Bearer " + TOKEN, "X-GitHub-Api-Version": "2026-03-10",
+                         "User-Agent": "Mercy-pinned-installer-publication"}
+              request = urllib.request.Request(url, data=body, method=method, headers=headers)
+              try:
+                  with AUTH_OPENER.open(request, timeout=90) as response:
+                      raw = response.read(8 * 1024 * 1024 + 1)
+                      require(len(raw) <= 8 * 1024 * 1024, "Unexpectedly large GitHub API response")
+                      return json.loads(raw)
+              except urllib.error.HTTPError as error:
+                  if error.code == 404 and missing_ok:
+                      return None
+                  # Deliberately do not print response bodies, headers or upload URLs.
+                  raise Failure("GitHub API " + method + " returned HTTP " + str(error.code)) from None
+              except (urllib.error.URLError, TimeoutError):
+                  raise Failure("GitHub API request failed before completion") from None
+
+
+          def pinned_download(url, size, digest, target, attachment=False):
+              parsed = urllib.parse.urlsplit(url)
+              require(parsed.scheme == "https" and parsed.hostname and not parsed.username and
+                      not parsed.password and not parsed.query and not parsed.fragment,
+                      "Unexpected public source URL")
+              checksum = hashlib.sha256()
+              total = 0
+              request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 MercyVerifier",
+                                                            "Accept-Encoding": "identity"})
+              try:
+                  with PUBLIC_OPENER.open(request, timeout=60) as response, target.open("xb") as output:
+                      require(response.status == 200, "Public source did not return a complete file")
+                      require(response.headers.get("Content-Length") == str(size),
+                              "Public source Content-Length differs from the pinned file")
+                      require(response.headers.get("Content-Encoding", "identity") == "identity",
+                              "Unexpected HTTP encoding for pinned installer bytes")
+                      if attachment:
+                          require(response.headers.get_content_type() in
+                                  ("application/octet-stream", "application/vnd.android.package-archive"),
+                                  "Public installer has an unexpected content type")
+                          require(response.headers.get("Content-Disposition", "").lower().startswith("attachment"),
+                                  "Public installer endpoint must download an attachment")
+                      while block := response.read(1024 * 1024):
+                          total += len(block)
+                          require(total <= size, "Public source exceeds pinned size")
+                          checksum.update(block)
+                          output.write(block)
+              except urllib.error.HTTPError as error:
+                  raise Failure("Public file download returned HTTP " + str(error.code)) from None
+              except (urllib.error.URLError, TimeoutError):
+                  raise Failure("Public file download failed before completion") from None
+              require(total == size and checksum.hexdigest() == digest,
+                      "Public source length or SHA-256 does not match the pinned file")
+
+
+          def sdk_tools():
+              # Ubuntu 24.04's official GitHub runner image already contains SDK 35.0.0.
+              # Fail closed if that fixed directory disappears; do not download software.
+              sdk = Path("/usr/local/lib/android/sdk").resolve()
+              configured = os.environ.get("ANDROID_HOME", str(sdk))
+              require(Path(configured).resolve() == sdk, "Unexpected Android SDK location")
+              build = sdk / "build-tools" / "35.0.0"
+              tools = [build / "apksigner", build / "aapt"]
+              require(all(tool.is_file() and os.access(tool, os.X_OK) for tool in tools),
+                      "Official preinstalled Android Build Tools 35.0.0 are unavailable")
+              return tools
+
+
+          def verify_apk(path, release, tools):
+              data = path.read_bytes()
+              require(len(data) == release["bytes"] and hashlib.sha256(data).hexdigest() == release["sha256"],
+                      "Final APK length or SHA-256 mismatch")
+              with zipfile.ZipFile(path) as archive:
+                  require(archive.testzip() is None, "APK ZIP integrity failed")
+                  if release["version"] == "0.18.0":
+                      abis = {name.split("/")[1] for name in archive.namelist()
+                              if name.startswith("lib/") and name.endswith(".so")}
+                      require(abis == {"arm64-v8a", "armeabi-v7a", "x86", "x86_64"},
+                              "Preserved Android CPU compatibility does not match")
+              clean_environment = {key: value for key, value in os.environ.items() if key != "GITHUB_TOKEN"}
+              try:
+                  signed = subprocess.run([str(tools[0]), "verify", "--verbose", "--print-certs", str(path)],
+                                          check=True, capture_output=True, text=True, timeout=60,
+                                          env=clean_environment).stdout
+                  badging = subprocess.run([str(tools[1]), "dump", "badging", str(path)],
+                                           check=True, capture_output=True, text=True, timeout=60,
+                                           env=clean_environment).stdout
+              except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                  raise Failure("Android SDK signature or manifest verification failed") from None
+              signers = re.findall(r"Signer #\d+ certificate SHA-256 digest: ([a-f0-9]+)", signed)
+              require(signers == [CERTIFICATE], "APK signer differs from Mercy's permanent signer")
+              package = re.search(r"^package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'",
+                                  badging, re.MULTILINE)
+              require(package and package.groups() == (release["package"], str(release["version_code"]),
+                                                      release["version"]), "APK package or version mismatch")
+              sdk = re.search(r"^sdkVersion:'([^']+)'", badging, re.MULTILINE)
+              require(sdk and sdk.group(1) == str(release["minimum_android_api"]),
+                      "APK minimum Android compatibility mismatch")
+              print("Verified APK:", release["filename"], release["bytes"], release["sha256"])
+
+
+          manifest_bytes = (json.dumps(MANIFEST, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+          checksums_bytes = ("".join(item["sha256"] + "  " + item["filename"] + "\n"
+                                   for item in MANIFEST["releases"])).encode("ascii")
+          EXPECTED = {item["filename"]: {"bytes": item["bytes"], "sha256": item["sha256"],
+                                        "mime": "application/vnd.android.package-archive"}
+                      for item in MANIFEST["releases"]}
+          for name, contents, mime in (("SHA256SUMS.txt", checksums_bytes, "text/plain"),
+                                       ("release-manifest.json", manifest_bytes, "application/json")):
+              EXPECTED[name] = {"bytes": len(contents), "sha256": hashlib.sha256(contents).hexdigest(), "mime": mime}
+          PREFIX = "/repos/" + REPOSITORY
+          PUBLIC_BASE = "https://github.com/" + REPOSITORY + "/releases/download/" + TAG + "/"
+
+
+          def list_assets(release_id):
+              assets = api("GET", PREFIX + "/releases/" + str(release_id) + "/assets?per_page=100")
+              require(isinstance(assets, list) and len(assets) < 100,
+                      "Unexpected release asset count; no asset will be deleted")
+              names = [item.get("name") for item in assets]
+              require(len(set(names)) == len(names) and set(names).issubset(EXPECTED),
+                      "Unexpected or duplicate release assets; no asset will be deleted")
+              return {item["name"]: item for item in assets}
+
+
+          def verify_asset(item, expected):
+              require(item.get("state") == "uploaded" and item.get("size") == expected["bytes"] and
+                      item.get("digest") == "sha256:" + expected["sha256"] and
+                      item.get("content_type") == expected["mime"] and
+                      item.get("browser_download_url") == PUBLIC_BASE + item.get("name", ""),
+                      "Uploaded release asset metadata differs from exact pinned inputs; no replacement performed")
+
+
+          def verify_tag(target, must_exist=False):
+              require(re.fullmatch(r"[a-f0-9]{40}", target or "") is not None,
+                      "Release target is not an exact repository commit")
+              tag = api("GET", PREFIX + "/git/ref/tags/" + TAG, missing_ok=True)
+              require(tag is not None or not must_exist, "Published release tag is missing")
+              if tag:
+                  require(tag.get("object", {}).get("type") == "commit" and
+                          tag["object"].get("sha") == target,
+                          "Release tag targets another commit; no tag alteration performed")
+
+
+          def verify_main_target():
+              branch = api("GET", PREFIX + "/git/ref/heads/main")
+              require(branch.get("object", {}).get("type") == "commit" and
+                      branch["object"].get("sha") == SHA,
+                      "Main changed during this run; no release mutation is permitted")
+
+
+          def verified_published_release(release, tools, directory):
+              require(release.get("tag_name") == TAG and release.get("draft") is False and
+                      release.get("prerelease") is False and release.get("immutable") is True,
+                      "Release is not published and immutable as required")
+              verify_tag(release.get("target_commitish"), must_exist=True)
+              assets = list_assets(release["id"])
+              require(set(assets) == set(EXPECTED), "Published release lacks exact expected assets")
+              for name, item in assets.items():
+                  verify_asset(item, EXPECTED[name])
+                  path = directory / ("public-" + name)
+                  pinned_download(PUBLIC_BASE + name, EXPECTED[name]["bytes"], EXPECTED[name]["sha256"],
+                                  path, attachment=name.endswith(".apk"))
+                  if name.endswith(".apk"):
+                      metadata = next(entry for entry in MANIFEST["releases"] if entry["filename"] == name)
+                      verify_apk(path, metadata, tools)
+              print("Published immutable release and all public downloads verified:")
+              print("https://github.com/" + REPOSITORY + "/releases/tag/" + TAG)
+              print(PUBLIC_BASE + "Mercy-Android-0.18.0.apk")
+
+
+          def publish():
+              repository = api("GET", PREFIX)
+              require(repository.get("full_name") == REPOSITORY and repository.get("private") is False and
+                      repository.get("default_branch") == "main", "Unexpected release repository")
+              commit = api("GET", PREFIX + "/commits/" + SHA)
+              require(commit.get("sha") == SHA, "Workflow SHA is not a commit in the release repository")
+              tools = sdk_tools()
+              with tempfile.TemporaryDirectory(prefix="mercy-publication-") as temporary:
+                  directory = Path(temporary)
+                  published = api("GET", PREFIX + "/releases/tags/" + TAG, missing_ok=True)
+                  if published and not published.get("draft"):
+                      verified_published_release(published, tools, directory)
+                      print("Exact release already exists; no mutation performed.")
+                      return
+                  # List authenticated releases because tag lookup does not guarantee draft visibility.
+                  releases = api("GET", PREFIX + "/releases?per_page=100")
+                  require(isinstance(releases, list) and len(releases) < 100,
+                          "Unexpected release listing; publication stopped")
+                  matches = [item for item in releases if item.get("tag_name") == TAG]
+                  require(len(matches) <= 1, "Multiple release drafts found; publication stopped")
+                  draft = matches[0] if matches else None
+                  if draft and not draft.get("draft"):
+                      verified_published_release(draft, tools, directory)
+                      print("Exact release already exists; no mutation performed.")
+                      return
+                  if draft:
+                      require(draft.get("target_commitish") == SHA and draft.get("prerelease") is False and
+                              draft.get("name") == "Mercy Android 0.18.0" and draft.get("body") == NOTES,
+                              "Existing draft has a different target or release notes; no alteration performed")
+                      for name, item in list_assets(draft["id"]).items():
+                          verify_asset(item, EXPECTED[name])
+                  verify_tag(SHA)
+                  verify_main_target()
+                  # Obtain only the already-public installer files; verify all ten chunks first.
+                  current = MANIFEST["releases"][0]
+                  output = directory / current["filename"]
+                  with output.open("xb") as complete:
+                      for index, part in enumerate(PARTS, start=1):
+                          require(part["path"] == "/release-installers/android/0.18.0/part" +
+                                  str(index).zfill(4) + ".bin", "Unexpected pinned chunk path")
+                          path = directory / ("part" + str(index))
+                          pinned_download(SOURCE_ORIGIN + part["path"], part["bytes"], part["sha256"], path)
+                          complete.write(path.read_bytes())
+                          path.unlink()
+                  for previous in MANIFEST["releases"][1:]:
+                      pinned_download(SOURCE_ORIGIN + "/downloads/" + previous["filename"],
+                                      previous["bytes"], previous["sha256"],
+                                      directory / previous["filename"])
+                  for release in MANIFEST["releases"]:
+                      verify_apk(directory / release["filename"], release, tools)
+                  (directory / "SHA256SUMS.txt").write_bytes(checksums_bytes)
+                  (directory / "release-manifest.json").write_bytes(manifest_bytes)
+                  if draft is None:
+                      verify_main_target()
+                      verify_tag(SHA)
+                      draft = api("POST", PREFIX + "/releases", {
+                          "tag_name": TAG, "target_commitish": SHA, "name": "Mercy Android 0.18.0",
+                          "body": NOTES, "draft": True, "prerelease": False, "generate_release_notes": False})
+                  require(draft.get("draft") is True and draft.get("tag_name") == TAG,
+                          "GitHub did not create the expected draft")
+                  upload_base = draft.get("upload_url", "").split("{", 1)[0]
+                  require(upload_base == "https://uploads.github.com/repos/" + REPOSITORY +
+                          "/releases/" + str(draft["id"]) + "/assets", "Unexpected GitHub upload endpoint")
+                  assets = list_assets(draft["id"])
+                  for name, expected in EXPECTED.items():
+                      if name in assets:
+                          verify_asset(assets[name], expected)
+                          continue
+                      body = (directory / name).read_bytes()
+                      require(len(body) == expected["bytes"] and hashlib.sha256(body).hexdigest() == expected["sha256"],
+                              "Local upload source changed after verification")
+                      item = api("POST", upload_base + "?" + urllib.parse.urlencode({"name": name}),
+                                 (body, expected["mime"]), upload=True)
+                      require(item.get("name") == name, "Upload returned an unexpected filename")
+                      verify_asset(item, expected)
+                      print("Verified uploaded asset:", name, expected["bytes"], expected["sha256"])
+                  assets = list_assets(draft["id"])
+                  require(set(assets) == set(EXPECTED), "Draft does not contain every exact approved asset")
+                  for name, item in assets.items():
+                      verify_asset(item, EXPECTED[name])
+                  # Only now publish. Root already enabled immutable releases by the authorized UI.
+                  verify_main_target()
+                  verify_tag(SHA)
+                  result = api("PATCH", PREFIX + "/releases/" + str(draft["id"]),
+                               {"draft": False, "make_latest": "true"})
+                  verified_published_release(result, tools, directory)
+                  summary = os.environ.get("GITHUB_STEP_SUMMARY")
+                  if summary:
+                      with open(summary, "a", encoding="utf-8") as report:
+                          report.write("Release inmutable y descarga pública completa verificadas.\n\n")
+                          for release in MANIFEST["releases"]:
+                              report.write("- [" + release["filename"] + "](" + PUBLIC_BASE + release["filename"] +
+                                           "): " + str(release["bytes"]) + " bytes; SHA-256 `" + release["sha256"] + "`.\n")
+                          report.write("\nFirma original, paquete y versiones comprobados. Pruebas en teléfonos reales e identidad/PAD pendientes.\n")
+
+          try:
+              publish()
+          except Failure as error:
+              print("Publication stopped:", str(error), file=sys.stderr)
+              sys.exit(1)
+          except Exception:
+              # No traceback may disclose authentication headers or an upload endpoint.
+              print("Publication stopped: unexpected verification error; no files were deleted or replaced.",
+                    file=sys.stderr)
+              sys.exit(1)
+          PY_RELEASE
