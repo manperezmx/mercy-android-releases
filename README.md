@@ -8,21 +8,29 @@ Paquete Android: `mx.mercy.preview`. Firma permanente SHA-256: `5b7833a44ac3770b
 
 Antes de instalar comprueba el SHA-256 del APK frente a SHA256SUMS.txt de su versión. La instalación desde el navegador requiere confirmación de Android.
 
-La versión 0.20.0 se conserva como respaldo y 0.19.0 y 0.18.0 permanecen en el historial, junto con los instaladores históricos de su release. Android normalmente no permite instalarla sobre una versión con código mayor; una restauración sin desinstalar requiere una nueva versión con código superior y la misma firma. No desinstales la aplicación para intentar volver a una versión anterior si necesitas conservar sus datos.
+La versión 0.21.0 se conserva como respaldo y 0.19.0 y 0.18.0 permanecen en el historial, junto con los instaladores históricos de su release. Android normalmente no permite instalarla sobre una versión con código mayor; una restauración sin desinstalar requiere una nueva versión con código superior y la misma firma. No desinstales la aplicación para intentar volver a una versión anterior si necesitas conservar sus datos.
 
 La versión 0.21.0 incorpora comparación facial local real con YuNet y SFace, previa autorización opcional independiente. No hay prueba de vida/PAD validada ni precisión superior al 97 % acreditada en Mercy; no aprueba automáticamente identidad o conexión. El detector de calidad y OCR cumplen funciones separadas.
 
 No contiene el código fuente de Mercy, claves de firma ni expedientes o datos de usuarios.
 
+La versión 0.22.0 simplifica la carga y revisión de documentos: autorización específica con una casilla y Continuar, documentos visibles para cuentas anteriores y pendientes de Soporte actualizados al resolver. Conserva los modelos y la compatibilidad de 0.21.0.
+
 ## Descarga actual
+
+[Descargar Mercy Android 0.22.0](https://github.com/manperezmx/mercy-android-releases/releases/download/v0.22.0/Mercy-Android-0.22.0.apk) · 135.362.506 bytes · código 22 · Android 6 o posterior (API 23).
+
+SHA-256 del APK: `9699941bf05c4764f08cceb62071a61665619383246a179c9468b13a7bae09b9`.
+
+[Versión 0.22.0 y archivos de verificación](https://github.com/manperezmx/mercy-android-releases/releases/tag/v0.22.0). Descarga pública completa verificada sin sesión: tamaño, SHA-256, paquete y firma original. Mantiene 16 componentes nativos, 10 modelos y cuatro ABI. Pruebas automatizadas aprobadas; pendiente validación en teléfonos físicos. El aviso definitivo conserva sus pendientes reales.
+
+## Respaldo e historial
 
 [Descargar Mercy Android 0.21.0](https://github.com/manperezmx/mercy-android-releases/releases/download/v0.21.0/Mercy-Android-0.21.0.apk) · 135.366.602 bytes · código 21 · Android 6 o posterior (API 23).
 
 SHA-256 del APK: `f2cd16875179eda61315b343c63884a0bbc17dce3ec5aed5b56104b7ca52d863`.
 
-[Versión 0.21.0 y archivos de verificación](https://github.com/manperezmx/mercy-android-releases/releases/tag/v0.21.0). Se verificó la descarga pública completa sin iniciar sesión, el tamaño, la huella SHA-256, el paquete y la firma original mediante las herramientas oficiales de Android. La release es inmutable. Las pruebas automatizadas no sustituyen la validación en teléfonos físicos.
-
-## Respaldo e historial
+[Respaldo 0.21.0 y archivos de verificación](https://github.com/manperezmx/mercy-android-releases/releases/tag/v0.21.0). Se verificó la descarga pública completa sin iniciar sesión, el tamaño, la huella SHA-256, el paquete y la firma original mediante las herramientas oficiales de Android. La release es inmutable. Las pruebas automatizadas no sustituyen la validación en teléfonos físicos.
 
 [Descargar Mercy Android 0.20.0](https://github.com/manperezmx/mercy-android-releases/releases/download/v0.20.0/Mercy-Android-0.20.0.apk) · 40.514.336 bytes · código 20 · SHA-256 `8aaf5e1c9a3de01dd52cac47cf144a363e735ece0953c904e9205f3af4bb8176`. [Su release inmutable se conserva](https://github.com/manperezmx/mercy-android-releases/releases/tag/v0.20.0).
 
