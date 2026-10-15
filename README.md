@@ -8,7 +8,7 @@ Paquete Android: `mx.mercy.preview`. Firma permanente SHA-256: `5b7833a44ac3770b
 
 Antes de instalar comprueba el SHA-256 del APK frente a SHA256SUMS.txt de su versión. La instalación desde el navegador requiere confirmación de Android.
 
-La versión 0.22.0 se conserva como respaldo y 0.19.0 y 0.18.0 permanecen en el historial, junto con los instaladores históricos de su release. Android normalmente no permite instalarla sobre una versión con código mayor; una restauración sin desinstalar requiere una nueva versión con código superior y la misma firma. No desinstales la aplicación para intentar volver a una versión anterior si necesitas conservar sus datos.
+La versión 0.23.0 se conserva como respaldo y 0.19.0 y 0.18.0 permanecen en el historial, junto con los instaladores históricos de su release. Android normalmente no permite instalarla sobre una versión con código mayor; una restauración sin desinstalar requiere una nueva versión con código superior y la misma firma. No desinstales la aplicación para intentar volver a una versión anterior si necesitas conservar sus datos.
 
 La versión 0.21.0 incorpora comparación facial local real con YuNet y SFace, previa autorización opcional independiente. No hay prueba de vida/PAD validada ni precisión superior al 97 % acreditada en Mercy; no aprueba automáticamente identidad o conexión. El detector de calidad y OCR cumplen funciones separadas.
 
@@ -18,17 +18,27 @@ La versión 0.22.0 simplifica la carga y revisión de documentos: autorización 
 
 ## Descarga actual
 
+[Descargar Mercy Android 0.24.0](https://github.com/manperezmx/mercy-android-releases/releases/download/v0.24.0/Mercy-Android-0.24.0.apk) · 135.395.274 bytes · código 24 · Android 6 o posterior (API 23).
+
+SHA-256 del APK: `9c65ad21e12f15f3208b77099a8c9b393405b67e28ca8a8fb22d73749f1a3e98`.
+
+[Versión 0.24.0 y archivos de verificación](https://github.com/manperezmx/mercy-android-releases/releases/tag/v0.24.0). Descarga pública completa verificada sin sesión: tamaño, SHA-256, paquete y firma original. Mantiene 16 componentes nativos, 10 modelos y cuatro ABI. No se han realizado pruebas en teléfonos físicos.
+
+La versión 0.24.0 despeja el mapa, muestra Conectarme y un resumen pequeño de ganancias registradas, último reparto y puntos. Durante una entrega oculta información secundaria y restaura rutas existentes. Los requisitos y la selfie aparecen al necesitarlos; la desconexión pide confirmación. La constancia fiscal es opcional para conectarse y puede enviarse por separado a Soporte/Administración; el expediente obligatorio inicial se envía junto. Corrige contadores para no revivir avisos ya atendidos, conservando nuevos mensajes y resultados para sus destinatarios. Requiere web/backend 0.4.42 o posterior.
+
+La comprobación diaria ejecuta comparación facial local real con la referencia aprobada y no guarda ni sube las capturas diarias. Está habilitada exclusivamente en el entorno operativo de pruebas como `client_reported_local_test`: el servidor valida el contexto y recibe el resultado, pero no acredita que un cliente manipulado lo haya calculado honestamente. No tiene precisión superior al 97 % ni prueba de vida/PAD validadas. El aviso definitivo conserva sus pendientes reales.
+
+Las pruebas automatizadas de API, D1 y React pasaron. Android tuvo seis expectativas antiguas de texto en la ejecución inicial; tras corregirlas pasaron 81 casos afectados y 48 de Activity. El registro final por clase reúne 1608 casos, sin afirmar que correspondan a una sola ejecución completa. Lint: cero errores, 222 advertencias.
+
+## Respaldo e historial
+
+
 [Descargar Mercy Android 0.23.0](https://github.com/manperezmx/mercy-android-releases/releases/download/v0.23.0/Mercy-Android-0.23.0.apk) · 135.387.082 bytes · código 23 · Android 6 o posterior (API 23).
 
 SHA-256 del APK: `1e5a019a4ec045c1cba4b479295d3e997bb1054b1189f42032f22833dff1b098`.
 
 [Versión 0.23.0 y archivos de verificación](https://github.com/manperezmx/mercy-android-releases/releases/tag/v0.23.0). Descarga pública completa verificada sin sesión: tamaño, SHA-256, paquete y firma original. Mantiene 16 componentes nativos, 10 modelos y cuatro ABI. Pruebas automatizadas aprobadas; pendiente validación en teléfonos físicos.
 
-La versión 0.23.0 incorpora expedientes documentales con envío conjunto, cámara congelada durante el procesamiento, orientación de licencia seleccionable, sesiones independientes e historial restringido de cuentas. Requiere web/backend 0.4.41 o posterior.
-
-La comprobación diaria ejecuta comparación facial local real con la referencia aprobada y no guarda ni sube las capturas diarias. Está habilitada exclusivamente en el entorno operativo de pruebas como `client_reported_local_test`: el servidor valida el contexto y recibe el resultado, pero no acredita que un cliente manipulado lo haya calculado honestamente. No tiene precisión superior al 97 % ni prueba de vida/PAD validadas. Una diferencia puede generar orientación en Soporte web, sin aprobación ficticia. El aviso definitivo conserva sus pendientes reales.
-
-## Respaldo e historial
 
 [Descargar Mercy Android 0.22.0](https://github.com/manperezmx/mercy-android-releases/releases/download/v0.22.0/Mercy-Android-0.22.0.apk) · 135.362.506 bytes · código 22 · Android 6 o posterior (API 23).
 
