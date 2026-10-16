@@ -1,0 +1,176 @@
+name: Publish exact Mercy Android 0.25.0
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/publish-0.25.0.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: mercy-android-v0.25.0-publication
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.repository == 'manperezmx/mercy-android-releases' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Verify exact signed APK and publish immutable installer
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          python3 - <<'PY_PUBLISH'
+          """Publish only the already-signed, pinned 0.25.0 installer. No app source/keys."""
+          import base64
+          import gzip
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+          import tempfile
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+          
+          REPO = 'manperezmx/mercy-android-releases'
+          TAG = 'v0.25.0'
+          SIZE = 135395274
+          SHA = '0e07735e4f172e51f5ce560a141d2140edbf22cb983436c0d199afb36fefa7fd'
+          CERT = '5b7833a44ac3770bae1b6eb18f134a87219be3d9337ba71f7b266adb607828da'
+          PATCH_SHA = 'e5bfc17c0d06b3124cdf6ed3526e8e036c7d5130b0815e59b46d00a35ac98475'
+          BASE_SHA = '9c65ad21e12f15f3208b77099a8c9b393405b67e28ca8a8fb22d73749f1a3e98'
+          FILENAME = 'Mercy-Android-0.25.0.apk'
+          NOTES = '''Mercy Android 0.25.0
+          
+          Selfie automática con umbral SFace sin margen adicional. Los intentos sin
+          coincidencia permiten repetir sin crear avisos a Soporte. Después de tres
+          intentos se ofrece una revisión manual elegida por el repartidor.
+          La selfie aprobada permite completar la conexión del día y dispositivo.
+          Controles del mapa y ganancias con nuevo diseño.
+          
+          Paquete mx.mercy.preview; código 25; firma original y cuatro arquitecturas.
+          APK ya firmado: esta publicación no compila ni modifica el instalador.
+          Pruebas automatizadas aprobadas; teléfonos físicos y calibración antifraude pendientes.
+          '''
+          
+          def require(ok, message):
+              if not ok:
+                  raise RuntimeError(message)
+          
+          def digest(data):
+              return hashlib.sha256(data).hexdigest()
+          
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  raise RuntimeError('Unexpected authenticated redirect')
+          
+          def public(url, size, sha):
+              require(url.startswith('https://'), 'HTTPS required')
+              with urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent': 'Mercy-publication', 'Accept-Encoding': 'identity'}), timeout=90) as r:
+                  data = r.read(size + 1)
+              require(len(data) == size and digest(data) == sha, 'Public input integrity mismatch')
+              return data
+          
+          def main():
+              require(os.environ.get('GITHUB_REPOSITORY') == REPO and os.environ.get('GITHUB_REF') == 'refs/heads/main', 'Wrong repository or branch')
+              require(os.environ.get('GITHUB_EVENT_NAME') in ['push', 'workflow_dispatch'], 'Wrong trigger')
+              commit = os.environ['GITHUB_SHA']
+              require(re.fullmatch('[a-f0-9]{40}', commit), 'Wrong commit')
+              opener = urllib.request.build_opener(NoRedirect())
+              prefix = '/repos/' + REPO
+              def api(method, path, body=None, mime='application/json', missing=False):
+                  if path.startswith('https://'):
+                      p = urllib.parse.urlsplit(path)
+                      require(p.scheme == 'https' and p.netloc == 'uploads.github.com' and re.fullmatch('/repos/'+REPO+'/releases/[0-9]+/assets', p.path), 'Wrong upload host')
+                      url = path
+                  else:
+                      require(path == prefix or path.startswith(prefix+'/'), 'Wrong API repository')
+                      url = 'https://api.github.com' + path
+                  payload = json.dumps(body).encode() if isinstance(body, dict) else body
+                  request = urllib.request.Request(url, method=method, data=payload, headers={'Authorization': 'Bearer '+os.environ['GITHUB_TOKEN'], 'Accept': 'application/vnd.github+json', 'Content-Type': mime, 'User-Agent': 'Mercy-pinned-025-publication'})
+                  try:
+                      with opener.open(request, timeout=120) as r:
+                          return json.load(r)
+                  except urllib.error.HTTPError as e:
+                      if missing and e.code == 404:
+                          return None
+                      raise RuntimeError('GitHub '+method+' returned '+str(e.code)) from None
+          
+              require(api('GET', prefix)['private'] is False, 'Expected existing public installer repository')
+              def head():
+                  require(api('GET', prefix+'/git/ref/heads/main')['object']['sha'] == commit, 'Main changed; publication stopped')
+              head()
+              patch_url = 'https://raw.githubusercontent.com/'+REPO+'/'+commit+'/packages/v0.25.0/apk.delta.json.gz'
+              patch = json.loads(gzip.decompress(public(patch_url, 1393279, PATCH_SHA)))
+              require(patch['base']['sha256'] == BASE_SHA and patch['target']['sha256'] == SHA and patch['target']['bytes'] == SIZE, 'Wrong delta metadata')
+              source = public('https://github.com/'+REPO+'/releases/download/v0.24.0/Mercy-Android-0.24.0.apk', 135395274, BASE_SHA)
+              target = bytearray()
+              for segment in patch['segments']:
+                  if 'copy' in segment:
+                      start, length = segment['copy']
+                      require(isinstance(start, int) and isinstance(length, int) and start >= 0 and length >= 0 and start+length <= len(source), 'Invalid copy range')
+                      target.extend(source[start:start+length])
+                  else:
+                      target.extend(base64.b64decode(segment['data'], validate=True))
+                  require(len(target) <= SIZE, 'Installer exceeds pinned size')
+              require(len(target) == SIZE and digest(target) == SHA, 'Reconstructed installer differs from signed original')
+              with tempfile.TemporaryDirectory() as temp:
+                  apk = Path(temp)/FILENAME
+                  apk.write_bytes(target)
+                  sdk = Path(os.environ.get('ANDROID_SDK_ROOT', os.environ.get('ANDROID_HOME', '/usr/local/lib/android/sdk')))
+                  candidates = sorted((sdk/'build-tools').glob('*/apksigner'), reverse=True)
+                  require(bool(candidates), 'Android verification tools missing')
+                  signer = candidates[0]
+                  clean = {k:v for k,v in os.environ.items() if k != 'GITHUB_TOKEN'}
+                  signature = subprocess.run([str(signer), 'verify', '--print-certs', str(apk)], env=clean, check=True, capture_output=True, text=True).stdout
+                  require('Signer #1 certificate SHA-256 digest: '+CERT in signature, 'Permanent signing certificate differs')
+                  package = subprocess.run([str(signer.parent/'aapt'), 'dump', 'badging', str(apk)], env=clean, check=True, capture_output=True, text=True).stdout
+                  require("package: name='mx.mercy.preview' versionCode='25' versionName='0.25.0'" in package and "sdkVersion:'23'" in package, 'Package or platform differs')
+              manifest = {'schema_version':1, 'version':'0.25.0', 'version_code':25, 'filename':FILENAME, 'package':'mx.mercy.preview', 'bytes':SIZE, 'sha256':SHA, 'certificate_sha256':CERT, 'min_sdk':23, 'target_sdk':36, 'physical_phone_tests':0, 'backup_version':'0.24.0'}
+              files = {FILENAME:(bytes(target), 'application/vnd.android.package-archive'), 'RELEASE-MANIFEST.json':((json.dumps(manifest,indent=2)+'\n').encode(), 'application/json'), 'SHA256SUMS.txt':((SHA+'  '+FILENAME+'\n').encode(), 'text/plain')}
+              release = api('GET', prefix+'/releases/tags/'+TAG, missing=True)
+              if release is None:
+                  matches = [x for x in api('GET', prefix+'/releases?per_page=100') if x['tag_name'] == TAG]
+                  require(len(matches) <= 1, 'Ambiguous draft')
+                  release = matches[0] if matches else None
+              head()
+              if release is None:
+                  release = api('POST', prefix+'/releases', {'tag_name':TAG, 'target_commitish':commit, 'name':'Mercy Android 0.25.0', 'body':NOTES, 'draft':True, 'prerelease':False})
+              require(release['tag_name'] == TAG and release['target_commitish'] == commit and not release['prerelease'], 'Existing release differs')
+              def assets():
+                  values = api('GET', prefix+'/releases/'+str(release['id'])+'/assets?per_page=100')
+                  require(len(values) < 100 and len({x['name'] for x in values}) == len(values) and all(x['name'] in files for x in values), 'Unexpected assets; no replacement performed')
+                  return {x['name']:x for x in values}
+              def verify(item, data, mime):
+                  require(item['state'] == 'uploaded' and item['size'] == len(data) and item.get('digest') == 'sha256:'+digest(data) and item['content_type'] == mime, 'Uploaded asset differs')
+              for name, (data, mime) in files.items():
+                  current = assets()
+                  if name in current:
+                      verify(current[name], data, mime)
+                      continue
+                  require(release['draft'], 'Published release cannot be modified')
+                  head()
+                  url = 'https://uploads.github.com/repos/'+REPO+'/releases/'+str(release['id'])+'/assets?'+urllib.parse.urlencode({'name':name})
+                  verify(api('POST', url, data, mime), data, mime)
+              current = assets()
+              require(set(current) == set(files), 'Release assets incomplete')
+              for name, (data, mime) in files.items():
+                  verify(current[name], data, mime)
+              if release['draft']:
+                  head()
+                  release = api('PATCH', prefix+'/releases/'+str(release['id']), {'draft':False, 'make_latest':'true'})
+              require(not release['draft'] and release.get('immutable') is True, 'Release is not immutable')
+              for name, (data, mime) in files.items():
+                  public('https://github.com/'+REPO+'/releases/download/'+TAG+'/'+name, len(data), digest(data))
+              print(json.dumps({'published':True, 'version':'0.25.0', 'bytes':SIZE, 'sha256':SHA, 'url':'https://github.com/'+REPO+'/releases/download/'+TAG+'/'+FILENAME, 'physical_phone_tests':0}))
+          
+          if __name__ == '__main__':
+              try:
+                  main()
+              except Exception as e:
+                  print('Publication stopped:', type(e).__name__, str(e)[:180])
+                  raise SystemExit(1)
+          PY_PUBLISH
