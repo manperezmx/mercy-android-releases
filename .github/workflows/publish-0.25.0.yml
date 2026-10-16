@@ -127,8 +127,8 @@ jobs:
                   clean = {k:v for k,v in os.environ.items() if k != 'GITHUB_TOKEN'}
                   signature = subprocess.run([str(signer), 'verify', '--verbose', '--print-certs', str(apk)], env=clean, check=True, capture_output=True, text=True).stdout
                   print('Signer verification:', signature)
-              signer_hashes = re.findall(r'certificate SHA-256 digest: ([a-fA-F0-9]{64})', signature)
-              require([s.lower() for s in signer_hashes] == [CERT], 'Permanent signing certificate differs')
+                  signer_hashes = re.findall(r'certificate SHA-256 digest: ([a-fA-F0-9]{64})', signature)
+                  require([s.lower() for s in signer_hashes] == [CERT], 'Permanent signing certificate differs')
                   package = subprocess.run([str(signer.parent/'aapt'), 'dump', 'badging', str(apk)], env=clean, check=True, capture_output=True, text=True).stdout
                   require("package: name='mx.mercy.preview' versionCode='25' versionName='0.25.0'" in package and "sdkVersion:'23'" in package, 'Package or platform differs')
               manifest = {'schema_version':1, 'version':'0.25.0', 'version_code':25, 'filename':FILENAME, 'package':'mx.mercy.preview', 'bytes':SIZE, 'sha256':SHA, 'certificate_sha256':CERT, 'min_sdk':23, 'target_sdk':36, 'physical_phone_tests':0, 'backup_version':'0.24.0'}
